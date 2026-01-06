@@ -1,31 +1,30 @@
 import type { Knex } from "knex";
 
 export async function up(knex: Knex): Promise<void> {
-  // 0. Remove o índice se existir
-  await knex.schema.raw('DROP INDEX IF EXISTS transactions_session_id_index');
+  const hasTransactions = await knex.schema.hasTable("transactions");
+  if (!hasTransactions) return;
 
-  // 1. Renomeia a tabela antiga
-  await knex.schema.renameTable('transactions', 'transactions_old');
+  const hasSessionId = await knex.schema.hasColumn("transactions", "session_id");
 
-  // 2. Cria a nova tabela com session_id nullable
-  await knex.schema.createTable('transactions', (table) => {
-    table.uuid('id').primary();
-    table.text('title').notNullable();
-    table.decimal('amount').notNullable();
-    table.timestamp('created_at').defaultTo(knex.fn.now()).notNullable();
-    table.uuid('session_id').nullable().index();
-  });
+  // Se não existir ainda, cria como nullable + index (seguro)
+  if (!hasSessionId) {
+    await knex.schema.alterTable("transactions", (table) => {
+      table.uuid("session_id").nullable().index();
+    });
+    return;
+  }
 
-  // 3. Copia os dados da tabela antiga para a nova
-  await knex.raw(`
-    INSERT INTO transactions (id, title, amount, created_at, session_id)
-    SELECT id, title, amount, created_at, session_id FROM transactions_old
-  `);
-
-  // 4. Remove a tabela antiga
-  await knex.schema.dropTable('transactions_old');
+  // Postgres: garantir nullable
+  await knex.raw(`ALTER TABLE transactions ALTER COLUMN session_id DROP NOT NULL`);
 }
 
 export async function down(knex: Knex): Promise<void> {
-  // Implemente o rollback se necessário (opcional)
+  const hasTransactions = await knex.schema.hasTable("transactions");
+  if (!hasTransactions) return;
+
+  const hasSessionId = await knex.schema.hasColumn("transactions", "session_id");
+  if (!hasSessionId) return;
+
+  // rollback opcional: voltar a NOT NULL (se você realmente quiser)
+  // await knex.raw(`ALTER TABLE transactions ALTER COLUMN session_id SET NOT NULL`);
 }
