@@ -2,7 +2,7 @@ import { app } from './app'
 import { env } from './env'
 
 app.listen({
-    port: env.PORT,
+    port: env.PORT || 10000, host: '0.0.0.0'
 }).then(() => {
-    console.log(`HTTP server running on http://localhost:${env.PORT}`)
+    console.log(`HTTP server running on http://localhost:${env.PORT || 10000}`)
 })
