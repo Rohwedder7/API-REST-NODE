@@ -1,0 +1,10 @@
+//dependencies
+node_modules
+
+//database files
+tmp/app.db
+
+//environment variables
+.env
+.env.test
+dist
